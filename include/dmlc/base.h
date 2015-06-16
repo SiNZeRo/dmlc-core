@@ -44,7 +44,7 @@
 ///
 /// code block to handle optionally loading
 ///
-#if !defined(__GNUC__)
+#if !defined(__GNUC__) || defined(__CYGWIN__)
 #define fopen64 std::fopen
 #endif
 #ifdef _MSC_VER
