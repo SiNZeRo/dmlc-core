@@ -27,6 +27,10 @@ CreateParser_(const char *uri_,
     InputSplit* source = InputSplit::Create(
         uri_, part_index, num_parts, "text");
     parser = new LibSVMParser<IndexType>(source, 2);
+  }else if (!strcmp(type, "libsvm_ext")) {
+    InputSplit* source = InputSplit::Create(
+        uri_, part_index, num_parts, "text");
+    parser = new LibSVMExtParser<IndexType>(source, 2);    
   }
   else {
     LOG(FATAL) << "unknown datatype " << type;

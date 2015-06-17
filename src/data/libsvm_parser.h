@@ -60,7 +60,7 @@ class LibSVMParser : public ParserImpl<IndexType> {
    * \param begin beginning of buffer
    * \param end end of buffer
    */
-  inline void ParseBlock(char *begin,
+  virtual inline void ParseBlock(char *begin,
                          char *end,
                          RowBlockContainer<IndexType> *out);
   /*!
@@ -77,7 +77,7 @@ class LibSVMParser : public ParserImpl<IndexType> {
     return begin;
   }
 
- private:
+ protected:
   // nthread
   int nthread_;
   // number of bytes readed
@@ -85,7 +85,20 @@ class LibSVMParser : public ParserImpl<IndexType> {
   // source split that provides the data
   InputSplit *source_;
 };
+template <typename IndexType>
+class LibSVMExtParser : public LibSVMParser<IndexType> {
+public:
 
+  explicit LibSVMExtParser(InputSplit *source,
+                        int nthread, int aux_size = 0):
+    LibSVMParser<IndexType>(source, nthread),aux_size_(aux_size){
+
+  }
+
+  inline void ParseBlock(char *begin, char *end, RowBlockContainer<IndexType> *out) ;
+private:
+  int aux_size_ ;
+};
 // implementation
 template <typename IndexType>
 inline bool LibSVMParser<IndexType>::
@@ -125,6 +138,62 @@ FillData(std::vector<RowBlockContainer<IndexType> > *data) {
 template <typename IndexType>
 inline void LibSVMParser<IndexType>::
 ParseBlock(char *begin,
+           char *end,
+           RowBlockContainer<IndexType> *out) {
+  out->Clear();
+  char * lbegin = begin;
+  char * lend = lbegin;
+  while (lbegin != end) {
+    // get line end
+    lend = lbegin + 1;
+    while (lend != end && *lend != '\n' && *lend != '\r') ++lend;
+    // parse label[:weight]
+    const char * p = lbegin;
+    const char * q = NULL;
+    real_t label;
+    real_t weight;
+    int r = ParsePair<real_t, real_t>(p, lend, &q, label, weight);
+    if (r < 1) {
+      // empty line
+      lbegin = lend;
+      continue;
+    }
+    if (r == 2) {
+      // has weight
+      out->weight.push_back(weight);
+    }
+    if (out->label.size() != 0) {
+      out->offset.push_back(out->index.size());
+    }
+    out->label.push_back(label);
+    // parse feature[:value]
+    p = q;
+    while (p != lend) {
+      IndexType featureId;
+      real_t value;
+      int r = ParsePair<IndexType, real_t>(p, lend, &q, featureId, value);
+      if (r < 1) {
+        p = q;
+        continue;
+      }
+      out->index.push_back(featureId);
+      if (r == 2) {
+        // has value
+        out->value.push_back(value);
+      }
+      p = q;
+    }
+    // next line
+    lbegin = lend;
+  }
+  if (out->label.size() != 0) {
+    out->offset.push_back(out->index.size());
+  }
+  CHECK(out->label.size() + 1 == out->offset.size());
+}
+
+template <typename IndexType>
+inline void LibSVMExtParser<IndexType>::ParseBlock(char *begin,
            char *end,
            RowBlockContainer<IndexType> *out) {
   out->Clear();

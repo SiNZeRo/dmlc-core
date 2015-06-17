@@ -33,11 +33,17 @@ struct RowBlockContainer {
   std::vector<IndexType> index;
   /*! \brief feature value */
   std::vector<real_t> value;
+  /*! \brief aux data*/
+  std::vector<data_t> aux;
   /*! \brief maximum value of index */
   IndexType max_index;
+  IndexType num_aux;
   // constructor
   RowBlockContainer(void) {
     this->Clear();
+  }
+  void init_aux(int aux_size) {
+    num_aux = aux_size;
   }
   /*! \brief convert to a row block */
   inline RowBlock<IndexType> GetBlock(void) const;
@@ -55,7 +61,7 @@ struct RowBlockContainer {
   /*! \brief clear the container */
   inline void Clear(void) {
     offset.clear(); offset.push_back(0);
-    label.clear(); index.clear(); value.clear(); weight.clear();
+    label.clear(); index.clear(); value.clear(); weight.clear(); aux.clear();
     max_index = 0;
   }
   /*! \brief size of the data */
@@ -67,6 +73,7 @@ struct RowBlockContainer {
     return offset.size() * sizeof(size_t) +
         label.size() * sizeof(real_t) +
         weight.size() * sizeof(real_t) +
+        aux.size() * sizeof(data_t) + 
         index.size() * sizeof(IndexType) +
         value.size() * sizeof(real_t);
   }
@@ -143,8 +150,10 @@ RowBlockContainer<IndexType>::GetBlock(void) const {
   data.offset = BeginPtr(offset);
   data.label = BeginPtr(label);
   data.weight = BeginPtr(weight);
+  data.aux = BeginPtr(aux);
   data.index = BeginPtr(index);
   data.value = BeginPtr(value);
+  data.aux_size = 0;
   return data;
 }
 template<typename IndexType>

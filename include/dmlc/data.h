@@ -18,7 +18,7 @@ namespace dmlc {
  * that will be used to store feature values
  */
 typedef float real_t;
-
+typedef int data_t;
 /*!
  * \brief this defines the unsigned integer type
  * that can normally be used to store feature index
@@ -70,6 +70,10 @@ class Row {
   real_t label;
   /*! \brief weight of the instance */
   real_t weight;
+  /*! \brief aux data of the instance */
+  const data_t *aux;
+  /*! \brief size of aux real_t data of the instance */
+  size_t aux_size;
   /*! \brief length of the sparse vector */
   size_t length;
   /*!
@@ -134,6 +138,10 @@ struct RowBlock {
   const real_t *label;
   /*! \brief With weight: array[size] label of each instance, otherwise nullptr */
   const real_t *weight;
+  /*! \brief aux real_tdata of the instance */
+  const data_t *aux;
+  /*! \brief size of aux real_t data of the instance */
+  size_t aux_size;
   /*! \brief feature index */
   const IndexType *index;
   /*! \brief feature value, can be NULL, indicating all values are 1 */
@@ -148,6 +156,7 @@ struct RowBlock {
   inline size_t MemCostBytes(void) const {
     size_t cost = size * (sizeof(size_t) + sizeof(real_t));
     if (weight != NULL) cost += size * sizeof(real_t);
+    cost += aux_size * sizeof(data_t);
     size_t ndata = offset[size] - offset[0];
     if (index != NULL) cost += ndata * sizeof(IndexType);
     if (value != NULL) cost += ndata * sizeof(real_t);
@@ -169,6 +178,9 @@ struct RowBlock {
     } else {
       ret.weight = NULL;
     }
+    /*
+      todo slice for aux
+    */
     ret.offset = offset + begin;
     ret.index = index;
     ret.value = value;
@@ -259,6 +271,13 @@ RowBlock<IndexType>::operator[](size_t rowid) const {
     inst.weight = weight[rowid];
   } else {
     inst.weight = 1.0f;
+  }
+  if (aux != NULL) {
+    inst.aux = aux + aux_size * rowid;
+  }
+  else {
+    inst.aux = NULL;
+    inst.aux_size; 
   }
   inst.length = offset[rowid + 1] - offset[rowid];
   inst.index = index + offset[rowid];
